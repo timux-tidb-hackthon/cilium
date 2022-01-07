@@ -1,0 +1,15 @@
+name: test-build
+
+on:
+  push:
+    branches:
+      - handlerww/tidb-filter
+
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: |
+          make kind-image
