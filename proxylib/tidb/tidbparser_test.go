@@ -75,8 +75,10 @@ func (s *TiDBSuite) TestTiDBOnDataInjection(c *C) {
 		>
 		`})
 	conn := s.ins.CheckNewConnectionOK(c, "tidb", true, 1, 2, "1.1.1.1:34567", "10.0.0.2:80", "cp3")
+	// request body
 	msg1 := "READ ssss\r\n"
 	data := [][]byte{[]byte(msg1)}
+	// []byte("") is the expectedResult
 	conn.CheckOnDataOK(c, false, false, &data, []byte(""), // expect result
 		proxylib.PASS, len(msg1))
 	msg2 := "WRITE yyyyy\r\n"
