@@ -17,5 +17,4 @@ jobs:
           username: ${{ secrets.ALI_DOCKER_USERNAME }}
           password: ${{ secrets.ALI_DOCKER_PASSWORD }}
       - run: |
-          DOCKER_DEV_ACCOUNT=registry.cn-heyuan.aliyuncs.com/handlerww/cilium-dev DOCKER_IMAGE_TAG=latest make dev-docker-image 
-          docker push registry.cn-heyuan.aliyuncs.com/handlerww/cilium-dev:latest
+          DOCKER_FLAGS=--push DOCKER_DEV_ACCOUNT=registry.cn-heyuan.aliyuncs.com/handlerww/cilium-dev DOCKER_IMAGE_TAG=latest make dev-docker-image 
