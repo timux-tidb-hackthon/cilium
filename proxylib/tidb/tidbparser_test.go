@@ -75,11 +75,11 @@ func (s *TiDBSuite) TestTiDBOnDataAllowDenyRegex(c *C) {
 		>
 		`})
 	conn := s.ins.CheckNewConnectionOK(c, "tidb", true, 1, 2, "1.1.1.1:34567", "10.0.0.2:80", "cp3")
-	msg1 := "READ ssss\r\n"
+	// msg1 := "READ ssss\r\n"
 	msg2 := "WRITE yyyyy\r\n"
-	data := [][]byte{[]byte(msg1 + msg2)}
-	conn.CheckOnDataOK(c, false, false, &data, []byte("ERRROR\r\n"),
-		proxylib.PASS, len(msg1),
-		proxylib.DROP, len(msg2),
+	data := [][]byte{[]byte(msg2)}
+	conn.CheckOnDataOK(c, false, false, &data, []byte("ERROR\r\n"), // expect result
+		// proxylib.PASS, len(msg1),
+		proxylib.DROP, len(msg2), // ops result, length
 		proxylib.MORE, 1)
 }
