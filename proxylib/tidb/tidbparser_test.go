@@ -78,11 +78,9 @@ func (s *TiDBSuite) TestTiDBOnDataInjection(c *C) {
 	msg1 := "READ ssss\r\n"
 	data := [][]byte{[]byte(msg1)}
 	conn.CheckOnDataOK(c, false, false, &data, []byte(""), // expect result
-		proxylib.PASS, len(msg1),
-		proxylib.MORE, 1)
+		proxylib.PASS, len(msg1))
 	msg2 := "WRITE yyyyy\r\n"
 	data = [][]byte{[]byte(msg2)}
 	conn.CheckOnDataOK(c, false, false, &data, []byte("ERROR\r\n"), // expect result
-		proxylib.DROP, len(msg2), // ops result, length
-		proxylib.MORE, 1)
+		proxylib.DROP, len(msg2)) // ops result, length)
 }
