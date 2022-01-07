@@ -1,9 +1,9 @@
 name: test-build
 
-on:
-  push:
-    branches:
-      - handlerww/tidb-filter
+on: {}
+  # push:
+  #   branches:
+  #     - handlerww/tidb-filter
 
 
 jobs:
