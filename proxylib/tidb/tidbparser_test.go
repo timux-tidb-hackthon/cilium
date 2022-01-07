@@ -55,7 +55,7 @@ func (s *TiDBSuite) TearDownSuite(c *C) {
 	s.logServer.Close()
 }
 
-func (s *TiDBSuite) TestTiDBOnDataAllowDenyRegex(c *C) {
+func (s *TiDBSuite) TestTiDBOnDataInjection(c *C) {
 	s.ins.CheckInsertPolicyText(c, "1", []string{`
 		name: "cp3"
 		policy: 2
@@ -75,11 +75,14 @@ func (s *TiDBSuite) TestTiDBOnDataAllowDenyRegex(c *C) {
 		>
 		`})
 	conn := s.ins.CheckNewConnectionOK(c, "tidb", true, 1, 2, "1.1.1.1:34567", "10.0.0.2:80", "cp3")
-	// msg1 := "READ ssss\r\n"
+	msg1 := "READ ssss\r\n"
+	data := [][]byte{[]byte(msg1)}
+	conn.CheckOnDataOK(c, false, false, &data, []byte(""), // expect result
+		proxylib.PASS, len(msg1),
+		proxylib.MORE, 1)
 	msg2 := "WRITE yyyyy\r\n"
-	data := [][]byte{[]byte(msg2)}
+	data = [][]byte{[]byte(msg2)}
 	conn.CheckOnDataOK(c, false, false, &data, []byte("ERROR\r\n"), // expect result
-		// proxylib.PASS, len(msg1),
 		proxylib.DROP, len(msg2), // ops result, length
 		proxylib.MORE, 1)
 }
