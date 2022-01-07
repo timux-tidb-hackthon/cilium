@@ -625,3 +625,6 @@ help: Makefile ## Display help for the Makefile, from https://www.thapaliya.com/
 
 .PHONY: help clean clean-container dev-doctor force generate-api generate-health-api generate-operator-api generate-hubble-api install licenses-all veryclean
 force :;
+
+test-tidb:
+	go test -timeout 30s -run ^Test github.com/cilium/cilium/proxylib/tidb -v
