@@ -15,28 +15,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-//
-// R2D2 Parser
-//
-// This is a toy protocol to teach people how to build a Cilium golang proxy parser.
-//
-
-// Current R2D2 parser supports filtering on a basic text protocol with 4 request-types:
-// "READ <filename>\r\n"  - Read a file from the Droid
-// "WRITE <filename>\r\n" - Write a file to the Droid
-// "HALT\r\n" - Shutdown the Droid
-// "RESET\r\n" - Reset the Droid to factory settings
-//
-// Replies include a status of either "OK\r\n", "ERROR\r\n" for "WRITE", "HALT", or "RESET".
-//  Replies for "READ" are either "OK <filedata>\r\n" or "ERROR\r\n".
-//
-//
-// Policy Examples:
-// {cmd : "READ"}  - Allow all reads, no other commands.
-// {cmd : "READ", file : "/public/.*" }  - Allow reads that are in the public directory
-// {file : "/public/.*" } - Allow read/write on the public directory.
-// {cmd : "HALT"} - Allow shutdown, but no other actions.
-
 type tidbRule struct {
 	cmdExact          string
 	fileRegexCompiled *regexp.Regexp
