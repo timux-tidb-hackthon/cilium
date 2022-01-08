@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2018 Authors of Cilium
 
-package tidb
+package tidbsql
 
 import (
 	"bytes"
@@ -15,36 +15,36 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type tidbRule struct {
+type tidbsqlRule struct {
 	cmdExact          string
 	fileRegexCompiled *regexp.Regexp
 }
 
-type tidbRequestData struct {
+type tidbsqlRequestData struct {
 	cmd  string
 	file string
 }
 
-func (rule *tidbRule) Matches(data interface{}) bool {
+func (rule *tidbsqlRule) Matches(data interface{}) bool {
 	// Cast 'data' to the type we give to 'Matches()'
 
-	reqData, ok := data.(tidbRequestData)
+	reqData, ok := data.(tidbsqlRequestData)
 	regexStr := ""
 	if rule.fileRegexCompiled != nil {
 		regexStr = rule.fileRegexCompiled.String()
 	}
 
 	if !ok {
-		log.Warning("Matches() called with type other than TiDBRequestData")
+		log.Warning("Matches() called with type other than TiDBSQLRequestData")
 		return false
 	}
 	if len(rule.cmdExact) > 0 && rule.cmdExact != reqData.cmd {
-		log.Infof("TiDBRule: cmd mismatch %s, %s", rule.cmdExact, reqData.cmd)
+		log.Infof("TiDBSQLRule: cmd mismatch %s, %s", rule.cmdExact, reqData.cmd)
 		return false
 	}
 	if rule.fileRegexCompiled != nil &&
 		!rule.fileRegexCompiled.MatchString(reqData.file) {
-		log.Infof("TiDBRule: file mismatch %s, %s", rule.fileRegexCompiled.String(), reqData.file)
+		log.Infof("TiDBSQLRule: file mismatch %s, %s", rule.fileRegexCompiled.String(), reqData.file)
 		return false
 	}
 	log.Infof("policy match for rule: '%s' '%s'", rule.cmdExact, regexStr)
@@ -62,7 +62,7 @@ func ruleParser(rule *cilium.PortNetworkPolicyRule) []proxylib.L7NetworkPolicyRu
 	allowRules := l7Rules.GetL7AllowRules()
 	rules := make([]proxylib.L7NetworkPolicyRule, 0, len(allowRules))
 	for _, l7Rule := range allowRules {
-		var rr tidbRule
+		var rr tidbsqlRule
 		for k, v := range l7Rule.Rule {
 			switch k {
 			case "cmd":
@@ -80,10 +80,10 @@ func ruleParser(rule *cilium.PortNetworkPolicyRule) []proxylib.L7NetworkPolicyRu
 			rr.cmdExact != "WRITE" &&
 			rr.cmdExact != "HALT" &&
 			rr.cmdExact != "RESET" {
-			proxylib.ParseError(fmt.Sprintf("Unable to parse L7 tidb rule with invalid cmd: '%s'", rr.cmdExact), rule)
+			proxylib.ParseError(fmt.Sprintf("Unable to parse L7 tidbsql rule with invalid cmd: '%s'", rr.cmdExact), rule)
 		}
 		if (rr.fileRegexCompiled != nil) && !(rr.cmdExact == "" || rr.cmdExact == "READ" || rr.cmdExact == "WRITE") {
-			proxylib.ParseError(fmt.Sprintf("Unable to parse L7 tidb rule, cmd '%s' is not compatible with 'file'", rr.cmdExact), rule)
+			proxylib.ParseError(fmt.Sprintf("Unable to parse L7 tidbsql rule, cmd '%s' is not compatible with 'file'", rr.cmdExact), rule)
 		}
 		regexStr := ""
 		if rr.fileRegexCompiled != nil {
@@ -98,9 +98,9 @@ func ruleParser(rule *cilium.PortNetworkPolicyRule) []proxylib.L7NetworkPolicyRu
 type factory struct{}
 
 func init() {
-	log.Info("init(): Registering tidbParserFactory")
-	proxylib.RegisterParserFactory("tidb", &factory{})
-	proxylib.RegisterL7RuleParser("tidb", ruleParser)
+	log.Info("init(): Registering tidbsqlParserFactory")
+	proxylib.RegisterParserFactory("tidbsql", &factory{})
+	proxylib.RegisterL7RuleParser("tidbsql", ruleParser)
 }
 
 type parser struct {
@@ -108,7 +108,7 @@ type parser struct {
 }
 
 func (f *factory) Create(connection *proxylib.Connection) interface{} {
-	log.Infof("TiDBParserFactory: Create: %v", connection)
+	log.Infof("TiDBSQLParserFactory: Create: %v", connection)
 	return &parser{connection: connection}
 }
 
@@ -140,7 +140,7 @@ func (p *parser) OnData(reply, endStream bool, dataArray [][]byte) (proxylib.OpT
 	if len(fields) < 1 {
 		return proxylib.ERROR, int(proxylib.ERROR_INVALID_FRAME_TYPE)
 	}
-	reqData := tidbRequestData{cmd: fields[0]}
+	reqData := tidbsqlRequestData{cmd: fields[0]}
 	if len(fields) == 2 {
 		reqData.file = fields[1]
 	}
@@ -156,7 +156,7 @@ func (p *parser) OnData(reply, endStream bool, dataArray [][]byte) (proxylib.OpT
 	p.connection.Log(access_log_entry_type,
 		&cilium.LogEntry_GenericL7{
 			GenericL7: &cilium.L7LogEntry{
-				Proto: "tidb",
+				Proto: "tidbsql",
 				Fields: map[string]string{
 					"cmd":  reqData.cmd,
 					"file": reqData.file,
