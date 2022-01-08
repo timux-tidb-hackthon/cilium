@@ -10,14 +10,13 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/cilium/cilium/proxylib/proxylib"
+	cilium "github.com/cilium/proxy/go/cilium/api"
+	"github.com/sirupsen/logrus"
 
 	"github.com/cilium/cilium/proxylib/memcached/binary"
 	"github.com/cilium/cilium/proxylib/memcached/meta"
 	"github.com/cilium/cilium/proxylib/memcached/text"
-
-	"github.com/cilium/proxy/go/cilium/api"
-	log "github.com/sirupsen/logrus"
+	"github.com/cilium/cilium/proxylib/proxylib"
 )
 
 // Rule matches against memcached requests
@@ -34,12 +33,12 @@ type Rule struct {
 
 // Matches returns true if the Rule matches
 func (rule *Rule) Matches(data interface{}) bool {
-	log.Debugf("memcache checking rule %v", *rule)
+	logrus.Debugf("memcache checking rule %v", *rule)
 
 	packetMeta, ok := data.(meta.MemcacheMeta)
 
 	if !ok {
-		log.Debugf("Wrong type supplied to Rule.Matches")
+		logrus.Debugf("Wrong type supplied to Rule.Matches")
 		return false
 	}
 
@@ -84,7 +83,7 @@ func (rule *Rule) Matches(data interface{}) bool {
 		return true
 	}
 
-	log.Debugf("No key rule specified, accepted by command match")
+	logrus.Debugf("No key rule specified, accepted by command match")
 	return true
 }
 
@@ -132,7 +131,7 @@ func L7RuleParser(rule *cilium.PortNetworkPolicyRule) []proxylib.L7NetworkPolicy
 				br.empty = true
 			}
 		}
-		log.Debugf("Parsed Rule pair: %v", br)
+		logrus.Debugf("Parsed Rule pair: %v", br)
 		rules = append(rules, &br)
 	}
 	return rules
@@ -143,7 +142,7 @@ type ParserFactory struct{}
 
 // Create creates memcached parser
 func (p *ParserFactory) Create(connection *proxylib.Connection) interface{} {
-	log.Debugf("ParserFactory: Create: %v", connection)
+	logrus.Debugf("ParserFactory: Create: %v", connection)
 	return &Parser{
 		connection: connection,
 	}
@@ -159,7 +158,7 @@ const (
 )
 
 func init() {
-	log.Debug("init(): Registering memcacheParserFactory")
+	logrus.Debug("init(): Registering memcacheParserFactory")
 	proxylib.RegisterParserFactory(parserName, memcacheParserFactory)
 	proxylib.RegisterL7RuleParser(parserName, L7RuleParser)
 }

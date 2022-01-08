@@ -9,11 +9,11 @@ import (
 	"os"
 	"strings"
 
+	iradix "github.com/hashicorp/go-immutable-radix"
+	"github.com/spf13/cobra"
+
 	"github.com/cilium/cilium/pkg/common"
 	"github.com/cilium/cilium/pkg/maps/ipcache"
-
-	"github.com/hashicorp/go-immutable-radix"
-	"github.com/spf13/cobra"
 )
 
 const usage = "IP address must be in dotted decimal (192.168.1.1) or IPv6 (feab::f02b) form"

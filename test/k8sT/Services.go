@@ -12,12 +12,12 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/cilium/cilium/test/ginkgo-ext"
-	"github.com/cilium/cilium/test/helpers"
-
 	"github.com/asaskevich/govalidator"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
+
+	. "github.com/cilium/cilium/test/ginkgo-ext"
+	"github.com/cilium/cilium/test/helpers"
 )
 
 const (
@@ -1072,7 +1072,7 @@ Secondary Interface %s :: IPv4: (%s, %s), IPv6: (%s, %s)`, helpers.DualStackSupp
 					})
 				})
 
-				SkipContextIf(helpers.SkipQuarantined, "Tests with direct routing", func() {
+				Context("Tests with direct routing", func() {
 
 					var directRoutingOpts = map[string]string{
 						"tunnel":               "disabled",

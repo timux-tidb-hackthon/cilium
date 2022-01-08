@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/cilium/cilium/pkg/addressing"
 	"github.com/cilium/cilium/pkg/completion"
 	"github.com/cilium/cilium/pkg/controller"
@@ -31,8 +33,6 @@ import (
 	"github.com/cilium/cilium/pkg/policy"
 	"github.com/cilium/cilium/pkg/revert"
 	"github.com/cilium/cilium/pkg/u8proto"
-
-	"github.com/sirupsen/logrus"
 )
 
 // GetNamedPort returns the port for the given name.
@@ -647,7 +647,7 @@ var reasonRegenRetry = "retrying regeneration"
 // ran again unless another build failure occurs. If the call to `Regenerate`
 // fails inside of the controller,
 func (e *Endpoint) startRegenerationFailureHandler() {
-	e.UpdateController(fmt.Sprintf("endpoint-%s-regeneration-recovery", e.StringID()), controller.ControllerParams{
+	e.controllers.UpdateController(fmt.Sprintf("endpoint-%s-regeneration-recovery", e.StringID()), controller.ControllerParams{
 		DoFunc: func(ctx context.Context) error {
 			select {
 			case <-e.regenFailedChan:

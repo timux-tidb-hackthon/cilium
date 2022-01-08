@@ -11,6 +11,8 @@ import (
 	"net"
 	"sync"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/cilium/cilium/pkg/controller"
 	"github.com/cilium/cilium/pkg/identity"
 	"github.com/cilium/cilium/pkg/identity/cache"
@@ -20,8 +22,6 @@ import (
 	"github.com/cilium/cilium/pkg/logging/logfields"
 	"github.com/cilium/cilium/pkg/option"
 	"github.com/cilium/cilium/pkg/source"
-
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -40,6 +40,9 @@ var (
 	// by this prefix. Subsequently these labels may be matched by network
 	// policy and propagated in monitor output.
 	identityMetadata = make(map[string]labels.Labels)
+
+	// applyIDMDChangesMutex protects InjectLabels and RemoveLabelsExcluded from being run in parallel
+	applyIDMDChangesMutex lock.Mutex
 
 	// ErrLocalIdentityAllocatorUninitialized is an error that's returned when
 	// the local identity allocator is uninitialized.
@@ -102,12 +105,15 @@ func InjectLabels(src source.Source, updater identityUpdater, triggerer policyTr
 		idsToPropagate = make(map[identity.NumericIdentity]labels.LabelArray)
 	)
 
+	applyIDMDChangesMutex.Lock()
+	defer applyIDMDChangesMutex.Unlock()
+
 	idMDMU.Lock()
-	defer idMDMU.Unlock()
 
 	for prefix, lbls := range identityMetadata {
 		id, isNew, err := injectLabels(prefix, lbls)
 		if err != nil {
+			idMDMU.Unlock()
 			return fmt.Errorf("failed to allocate new identity for IP %v: %w", prefix, err)
 		}
 
@@ -166,6 +172,8 @@ func InjectLabels(src source.Source, updater identityUpdater, triggerer policyTr
 			}
 		}
 	}
+	// Don't hold lock while calling UpdateIdentities, as it will otherwise run into a deadlock
+	idMDMU.Unlock()
 
 	// Recalculate policy first before upserting into the ipcache.
 	if trigger {
@@ -278,6 +286,9 @@ func RemoveLabelsExcluded(
 	updater identityUpdater,
 	triggerer policyTriggerer,
 ) {
+	applyIDMDChangesMutex.Lock()
+	defer applyIDMDChangesMutex.Unlock()
+
 	idMDMU.Lock()
 	defer idMDMU.Unlock()
 

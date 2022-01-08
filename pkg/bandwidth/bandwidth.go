@@ -4,16 +4,16 @@
 package bandwidth
 
 import (
+	"github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink"
+	"k8s.io/apimachinery/pkg/api/resource"
+
 	"github.com/cilium/cilium/pkg/datapath/linux/probes"
 	"github.com/cilium/cilium/pkg/logging"
 	"github.com/cilium/cilium/pkg/logging/logfields"
 	"github.com/cilium/cilium/pkg/maps/bwmap"
 	"github.com/cilium/cilium/pkg/option"
 	"github.com/cilium/cilium/pkg/sysctl"
-	"github.com/sirupsen/logrus"
-	"github.com/vishvananda/netlink"
-
-	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 const (
@@ -36,13 +36,7 @@ func GetBytesPerSec(bandwidth string) (uint64, error) {
 }
 
 func ProbeBandwidthManager() {
-	if option.Config.DryMode || !option.Config.EnableBandwidthManager {
-		return
-	}
-
-	if _, err := sysctl.Read("net.core.default_qdisc"); err != nil {
-		log.Warn("BPF bandwidth manager could not read procfs. Disabling the feature.")
-		option.Config.EnableBandwidthManager = false
+	if option.Config.DryMode {
 		return
 	}
 
@@ -54,6 +48,15 @@ func ProbeBandwidthManager() {
 		if _, ok := h["bpf_skb_ecn_set_ce"]; ok {
 			kernelGood = true
 		}
+	}
+	option.Config.ResetQueueMapping = kernelGood
+	if !option.Config.EnableBandwidthManager {
+		return
+	}
+	if _, err := sysctl.Read("net.core.default_qdisc"); err != nil {
+		log.Warn("BPF bandwidth manager could not read procfs. Disabling the feature.")
+		option.Config.EnableBandwidthManager = false
+		return
 	}
 	if !kernelGood {
 		log.Warn("BPF bandwidth manager needs kernel 5.1 or newer. Disabling the feature.")
