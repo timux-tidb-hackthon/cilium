@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"fmt"
 	"regexp"
-	"strings"
 
 	"github.com/cilium/cilium/proxylib/proxylib"
 	cilium "github.com/cilium/proxy/go/cilium/api"
@@ -64,6 +63,7 @@ func ruleParser(rule *cilium.PortNetworkPolicyRule) []proxylib.L7NetworkPolicyRu
 	for _, l7Rule := range allowRules {
 		var rr tidbsqlRule
 		for k, v := range l7Rule.Rule {
+			log.Infof("k value %v", k)
 			switch k {
 			case "cmd":
 				rr.cmdExact = v
@@ -113,62 +113,53 @@ func (f *factory) Create(connection *proxylib.Connection) interface{} {
 }
 
 func (p *parser) OnData(reply, endStream bool, dataArray [][]byte) (proxylib.OpType, int) {
-	log.Infof("srcid: %v, destid: %v", p.connection.SrcId, p.connection.DstId)
+	identity := p.connection.SrcId
+	log.Info("Identity:", identity)
 
 	// inefficient, but simple
 	data := string(bytes.Join(dataArray, []byte{}))
 
-	log.Infof("OnData: '%s'", data)
-	msgLen := strings.Index(data, "\r\n")
-	if msgLen < 0 {
-		// No delimiter, request more data
-		log.Infof("No delimiter found, requesting more bytes")
-		return proxylib.MORE, 1
+	log.Infof("OnData: '%s', len: %d", data, len(data))
+	if endStream || len(data) == 0 {
+		log.Info("stream ended, nothing need to be done, waiting client to issue new query")
+		return proxylib.NOP, 0
 	}
 
-	msgStr := data[:msgLen] // read single request
-	msgLen += 2             // include "\r\n"
-	log.Infof("Request = '%s'", msgStr)
+	msgLen := data[0]
+	d := data[4:]
+	if len(d) < int(msgLen) {
+		log.Infof("Not enough data, requesting more bytes")
+		return proxylib.MORE, int(msgLen) - len(d)
+	}
 
-	// we don't process reply traffic for now
 	if reply {
-		log.Infof("reply, passing %d bytes", msgLen)
-		return proxylib.PASS, msgLen
+		log.Infof("passing %d bytes for reply", len(data))
+		return proxylib.PASS, len(data)
 	}
 
-	fields := strings.Split(msgStr, " ")
-	if len(fields) < 1 {
-		return proxylib.ERROR, int(proxylib.ERROR_INVALID_FRAME_TYPE)
-	}
-	reqData := tidbsqlRequestData{cmd: fields[0]}
-	if len(fields) == 2 {
-		reqData.file = fields[1]
+	cmd := d[0]
+	// we only process COM_QUERY, all other traffic should pass
+	if int(cmd) != 3 {
+		log.Infof("passing %d bytes for non COM_QUERY", len(data))
+		return proxylib.PASS, len(data)
 	}
 
-	matches := true
-	access_log_entry_type := cilium.EntryType_Request
+	stmt := d[1:] // sql statement
 
-	if !p.connection.Matches(reqData) {
-		matches = false
-		access_log_entry_type = cilium.EntryType_Denied
-	}
+	log.Infof("passing %d bytes for sql statement: %s", len(data), stmt)
 
-	p.connection.Log(access_log_entry_type,
-		&cilium.LogEntry_GenericL7{
-			GenericL7: &cilium.L7LogEntry{
-				Proto: "tidbsql",
-				Fields: map[string]string{
-					"cmd":  reqData.cmd,
-					"file": reqData.file,
-				},
-			},
-		})
-
+	// TODO: define a deny check when querying datas from some database
+	matches := verifyQuery(stmt, rule)
 	if !matches {
+		// TODO: construct a MySQL style unauthorized error
 		p.connection.Inject(true, []byte("ERROR\r\n"))
-		log.Infof("Policy mismatch, dropping %d bytes", msgLen)
-		return proxylib.DROP, msgLen
+		log.Infof("Policy mismatch, dropping %d bytes", len(data))
+		return proxylib.DROP, len(data)
 	}
 
-	return proxylib.PASS, msgLen
+	return proxylib.PASS, len(data)
+}
+
+func verifyQuery() bool {
+	
 }
