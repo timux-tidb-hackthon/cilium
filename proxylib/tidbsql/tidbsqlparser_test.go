@@ -76,13 +76,42 @@ func (s *TiDBSQLSuite) TestTiDBSQLOnDataInjection(c *C) {
 		`})
 	conn := s.ins.CheckNewConnectionOK(c, "tidbsql", true, 1, 2, "1.1.1.1:34567", "10.0.0.2:80", "cp3")
 	// request body
-	msg1 := "READ ssss\r\n"
-	data := [][]byte{[]byte(msg1)}
+	stmt1 := "SELECT a, b FROM allow_database"
+	data := [][]byte{constructStmtBytesArray(stmt1)}
 	// []byte("") is the expectedResult
 	conn.CheckOnDataOK(c, false, false, &data, []byte(""), // expect result
-		proxylib.PASS, len(msg1))
-	msg2 := "WRITE yyyyy\r\n"
-	data = [][]byte{[]byte(msg2)}
+		proxylib.PASS, len(stmt1)+4)
+	stmt2 := "SELECT a, b FROM deny_database"
+	data = [][]byte{constructStmtBytesArray(stmt2)}
 	conn.CheckOnDataOK(c, false, false, &data, []byte("ERROR\r\n"), // expect result
-		proxylib.DROP, len(msg2)) // ops result, length)
+		proxylib.DROP, len(stmt2)+4) // ops result, length)
+}
+
+func constructStmtBytesArray(stmt string) []byte {
+	// https://dev.mysql.com/doc/internals/en/mysql-packet.html#packet-Protocol::Packet
+	ops := []byte{3}     // COM_QUERY, https://dev.mysql.com/doc/internals/en/com-query.html
+	stmt := []byte(stmt) //
+	payload := append(ops, stmt...)
+	payloadLength := len(payload)
+	sequenceID = 0
+	return append([]byte{byte(payloadLength), 0, 0 /*payload length, assume payload < 255*/, byte(sequenceID)}, payload...)
+}
+
+func constructErrorMessage(errorMessage string) []byte {
+	// payloadLength is a fixed length integer: https://dev.mysql.com/doc/internals/en/integer.html#packet-Protocol::FixedLengthInteger
+	// nodatabaseSelectedErr = []byte{29 0 0 1 255 22 4 35 51 68 48 48 48 48 78 111 32 100 97 116 97 98 97 115 101 32 115 101 108 101 99 116 101 100}
+	// return nodatabaseSelectedErr
+
+	// https://dev.mysql.com/doc/internals/en/packet-ERR_Packet.html
+
+	// TODO
+	sequenceID = 1
+	header = []byte{0xff}
+	errorCode = []byte{0x16 0x04} // 1046?
+	sqlStateMarker = []byte{0x23}
+	sqlState = []byte("3D000")
+	errorMessages := []byte("No database selected")
+	payload := []byte{header...,errorCode...,sqlStateMarker...,sqlState...,errorMeesage...}
+	payloadLength := len(payload)
+	return append([]byte{byte(payloadLength),0,0,byte(sequenceID)},payload...)
 }
