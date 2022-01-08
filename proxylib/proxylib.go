@@ -22,10 +22,6 @@ import (
 	_ "github.com/cilium/cilium/proxylib/r2d2"
 	_ "github.com/cilium/cilium/proxylib/testparsers"
 	_ "github.com/cilium/cilium/proxylib/tidb"
-
-	"github.com/cilium/cilium/pkg/flowdebug"
-	"github.com/cilium/cilium/pkg/lock"
-	log "github.com/sirupsen/logrus"
 )
 
 var (
