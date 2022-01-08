@@ -109,11 +109,11 @@ type parser struct {
 
 func (f *factory) Create(connection *proxylib.Connection) interface{} {
 	log.Infof("TiDBParserFactory: Create: %v", connection)
-
 	return &parser{connection: connection}
 }
 
 func (p *parser) OnData(reply, endStream bool, dataArray [][]byte) (proxylib.OpType, int) {
+	log.Infof("srcid: %v, destid: %v", p.connection.SrcId, p.connection.DstId)
 
 	// inefficient, but simple
 	data := string(bytes.Join(dataArray, []byte{}))
