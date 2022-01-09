@@ -20,3 +20,9 @@ spec:
             l7:
               - cmd: "select"
                 database: "test"
+              - cmd: "insert"
+                database: "test"
+              - cmd: "update"
+                database: "test"
+              - cmd: "delete"
+                database: "test"
