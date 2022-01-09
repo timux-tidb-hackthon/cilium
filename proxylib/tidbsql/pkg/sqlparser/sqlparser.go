@@ -17,17 +17,17 @@ func parse(sql string) (ast.StmtNode, error) {
 	return stmtNodes[0], nil
 }
 
-func GetDatabaseTables(sql string) (database string, table string, err error) {
+func GetDatabaseTables(sql string) (action string, database string, table string, err error) {
 	astNode, err := parse(sql)
 	if err != nil {
 		fmt.Printf("parse error: %v\n", err.Error())
-		return
+		return "", "", "", err.Error()
 	}
 
 	switch v := astNode.(type) {
 	case *ast.SelectStmt:
 		table := astNode.(*ast.SelectStmt).From.TableRefs.Left.(*ast.TableSource).Source.(*ast.TableName)
-		return table.Name.String(), table.Schema.String(), nil
+		return "select", table.Schema.String(), table.Name.String(), nil
 	default:
 		fmt.Println(v)
 	}

@@ -9,7 +9,7 @@ import (
 	"regexp"
 
 	"github.com/cilium/cilium/proxylib/proxylib"
-	sqlparser "github.com/cilium/cilium/proxylib/proxylib/tidbsql/pkg/sqlparser"
+	sqlparser "github.com/cilium/cilium/proxylib/tidbsql/pkg/sqlparser"
 	cilium "github.com/cilium/proxy/go/cilium/api"
 	log "github.com/sirupsen/logrus"
 )
@@ -24,10 +24,8 @@ type tidbsqlRequestData struct {
 	table  string
 }
 
-func (rule *tidbsqlRule) Matches(data interface{}) bool {
-	// Cast 'data' to the type we give to 'Matches()'
-	database, table, _ := sqlparser.GetDatabaseTables(sql)
-	reqData, ok := data.(tidbsqlRequestData)
+func (rule *tidbsqlRule) Matches(sql string) bool {
+	reqAction, reqDatabase, reqTable, _ := sqlparser.GetDatabaseTables(sql)
 	regexStr := ""
 	if rule.tableRegexCompiled != nil {
 		regexStr = rule.tableRegexCompiled.String()
@@ -37,15 +35,19 @@ func (rule *tidbsqlRule) Matches(data interface{}) bool {
 		log.Warning("Matches() called with type other than TiDBSQLRequestData")
 		return false
 	}
-	if len(rule.actionExact) > 0 && rule.actionExact != reqData.action {
-		log.Infof("TiDBSQLRule: cmd mismatch %s, %s", rule.actionExact, reqData.action)
+	if len(rule.actionExact) > 0 && rule.actionExact != reqAction {
+		log.Infof("TiDBSQLRule: cmd mismatch %s, %s", rule.actionExact, action)
 		return false
 	}
 	if rule.tableRegexCompiled != nil &&
-		!rule.tableRegexCompiled.MatchString(reqData.table) {
-		log.Infof("TiDBSQLRule: database mismatch %s, %s", rule.tableRegexCompiled.String(), reqData.table)
+		tName := reqTable
+		if reqDatabase != "":
+			tName = fmt.Sprintf("%s.%s",reqDatabase,reqTable)
+		!rule.tableRegexCompiled.MatchString(tName) {
+		log.Infof("TiDBSQLRule: database mismatch %s, %s", rule.tableRegexCompiled.String(), tName)
 		return false
 	}
+
 	log.Infof("policy match for rule: '%s' '%s'", rule.actionExact, regexStr)
 	return true
 }
@@ -63,7 +65,6 @@ func ruleParser(rule *cilium.PortNetworkPolicyRule) []proxylib.L7NetworkPolicyRu
 	for _, l7Rule := range allowRules {
 		var rr tidbsqlRule
 		for k, v := range l7Rule.Rule {
-			log.Infof("k value %v", k)
 			switch k {
 			case "select":
 				rr.actionExact = "select"
@@ -159,10 +160,16 @@ func (p *parser) OnData(reply, endStream bool, dataArray [][]byte) (proxylib.OpT
 
 	stmt := body[1:] // sql statement
 
+	matches := true
+	if !p.connection.Matches(stmt) {
+		matches = false
+	}
+	if !matches {
+		// TODO: use MySQL ERROR packet
+		p.connection.Inject(true, []byte("ERROR\r\n"))
+		logrus.Debugf("Policy mismatch, dropping %d bytes", msgLen)
+		return proxylib.DROP, msgLen
+	}
 	log.Infof("passing %d bytes for sql statement: %s", msgLen, stmt)
 	return proxylib.PASS, msgLen
-}
-
-func verifyQuery() bool {
-	return true
 }
