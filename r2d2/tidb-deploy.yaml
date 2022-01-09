@@ -2,8 +2,8 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: tidb
-  namespace: default
   labels:
+    env: test
     app: tidb
 spec:
   containers:
@@ -13,10 +13,23 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: mysql-cli
-  namespace: default
+  name: biling
   labels:
-    app: client
+    env: test
+    app: billing
+spec:
+  containers:
+  - name: mysql-cli
+    image: alpine:3.14
+    command: ["tail", "-f", "/dev/null"]
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: website
+  labels:
+    env: test
+    app: website
 spec:
   containers:
   - name: mysql-cli

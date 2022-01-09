@@ -1,16 +1,16 @@
 apiVersion: "cilium.io/v2"
 kind: CiliumNetworkPolicy
 metadata:
-  name: "tidb-demo"
+  name: "tidb-security"
 spec:
-  description: "tidb demo policy"
+  description: "Enhance TiDB security"
   endpointSelector:
     matchLabels:
-      app: tidb
+      env: test
   ingress:
     - fromEndpoints:
         - matchLabels:
-            app: client
+            app: website
       toPorts:
         - ports:
             - port: "4000"
@@ -18,7 +18,21 @@ spec:
           rules:
             l7proto: tidbsql
             l7:
-              - select: "mydb.t1"
-              - insert: "mydb.t1"
-              - update: "mydb.t1"
-              - delete: "mydb.t1"
+              - select: "test.web.*"
+              - insert: "test.web.*"
+              - update: "test.web.*"
+              - delete: "test.web.*"
+    - fromEndpoints:
+        - matchLabels:
+            app: billing
+      toPorts:
+        - ports:
+            - port: "4000"
+              protocol: TCP
+          rules:
+            l7proto: tidbsql
+            l7:
+              - select: "test.billing.*"
+              - insert: "test.billing.*"
+              - update: "test.billing.*"
+              - delete: "test.billing.*"
