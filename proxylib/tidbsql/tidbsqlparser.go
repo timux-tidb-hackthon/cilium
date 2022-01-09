@@ -31,19 +31,17 @@ func (rule *tidbsqlRule) Matches(sql string) bool {
 		regexStr = rule.tableRegexCompiled.String()
 	}
 
-	if !ok {
-		log.Warning("Matches() called with type other than TiDBSQLRequestData")
-		return false
-	}
 	if len(rule.actionExact) > 0 && rule.actionExact != reqAction {
-		log.Infof("TiDBSQLRule: cmd mismatch %s, %s", rule.actionExact, action)
+		log.Infof("TiDBSQLRule: cmd mismatch %s, %s", rule.actionExact, reqAction)
 		return false
 	}
-	if rule.tableRegexCompiled != nil &&
-		tName := reqTable
-		if reqDatabase != "":
-			tName = fmt.Sprintf("%s.%s",reqDatabase,reqTable)
-		!rule.tableRegexCompiled.MatchString(tName) {
+
+	tName := reqTable
+	if reqDatabase != "" {
+		tName = fmt.Sprintf("%s.%s", reqDatabase, reqTable)
+	}
+
+	if rule.tableRegexCompiled != nil && !rule.tableRegexCompiled.MatchString(tName) {
 		log.Infof("TiDBSQLRule: database mismatch %s, %s", rule.tableRegexCompiled.String(), tName)
 		return false
 	}
