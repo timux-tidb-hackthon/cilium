@@ -18,11 +18,7 @@ spec:
           rules:
             l7proto: tidbsql
             l7:
-              - key: "select"
-                value: "mydb.t1"
-              - key: "insert"
-                value: "mydb.t1"
-              - key: "update"
-                value: "mydb.t1"
-              - key: "delete"
-                value: "mydb.t1"
+              - select: "mydb.t1"
+              - insert: "mydb.t1"
+              - update: "mydb.t1"
+              - delete: "mydb.t1"
