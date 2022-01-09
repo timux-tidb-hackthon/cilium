@@ -18,11 +18,11 @@ spec:
           rules:
             l7proto: tidbsql
             l7:
-              - cmd: "select"
-                database: "test"
-              - cmd: "insert"
-                database: "test"
-              - cmd: "update"
-                database: "test"
-              - cmd: "delete"
-                database: "test"
+              - key: "select"
+                value: "mydb.t1"
+              - key: "insert"
+                value: "mydb.t1"
+              - key: "update"
+                value: "mydb.t1"
+              - key: "delete"
+                value: "mydb.t1"
