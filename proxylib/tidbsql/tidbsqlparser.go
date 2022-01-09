@@ -166,10 +166,32 @@ func (p *parser) OnData(reply, endStream bool, dataArray [][]byte) (proxylib.OpT
 	}
 	if !matches {
 		// TODO: use MySQL ERROR packet
-		p.connection.Inject(true, []byte("ERROR\r\n"))
+		p.connection.Inject(true, constructErrorMessage(errorMessage))
 		logrus.Debugf("Policy mismatch, dropping %d bytes", msgLen)
 		return proxylib.DROP, msgLen
 	}
 	log.Infof("passing %d bytes for sql statement: %s", msgLen, stmt)
 	return proxylib.PASS, msgLen
+}
+
+func constructErrorMessage(errorMessage string) []byte {
+	// payloadLength is a fixed length integer: https://dev.mysql.com/doc/internals/en/integer.html#packet-Protocol::FixedLengthInteger
+	// nodatabaseSelectedErr = []byte{29 0 0 1 255 22 4 35 51 68 48 48 48 48 78 111 32 100 97 116 97 98 97 115 101 32 115 101 108 101 99 116 101 100}
+	// return nodatabaseSelectedErr
+
+	// https://dev.mysql.com/doc/internals/en/packet-ERR_Packet.html
+
+	sequenceID := 1
+	header := []byte{0xff}
+	errorCode := []byte{0x16, 0x04} // 1046?
+	sqlStateMarker := []byte{0x23}
+	sqlState := []byte("3D000")
+	payload := []byte{}
+	payload = append(payload, header...)
+	payload = append(payload, errorCode...)
+	payload = append(payload, sqlStateMarker...)
+	payload = append(payload, sqlState...)
+	payload = append(payload, []byte(errorMessage)...)
+	payloadLength := len(payload)
+	return append([]byte{byte(payloadLength), 0, 0, byte(sequenceID)}, payload...)
 }
