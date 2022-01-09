@@ -24,8 +24,8 @@ type tidbsqlRequestData struct {
 	table  string
 }
 
-func (rule *tidbsqlRule) Matches(sql string) bool {
-	reqAction, reqDatabase, reqTable, _ := sqlparser.GetDatabaseTables(sql)
+func (rule *tidbsqlRule) Matches(sql interface{}) bool {
+	reqAction, reqDatabase, reqTable, _ := sqlparser.GetDatabaseTables(sql.(string))
 	regexStr := ""
 	if rule.tableRegexCompiled != nil {
 		regexStr = rule.tableRegexCompiled.String()
@@ -159,13 +159,13 @@ func (p *parser) OnData(reply, endStream bool, dataArray [][]byte) (proxylib.OpT
 	stmt := body[1:] // sql statement
 
 	matches := true
-	if !p.connection.Matches(stmt) {
+	if !p.connection.Matches(fmt.Sprintf("%v", stmt)) {
 		matches = false
 	}
 	if !matches {
 		// TODO: use MySQL ERROR packet
-		p.connection.Inject(true, constructErrorMessage(errorMessage))
-		logrus.Debugf("Policy mismatch, dropping %d bytes", msgLen)
+		p.connection.Inject(true, constructErrorMessage("No database selected"))
+		log.Debugf("Policy mismatch, dropping %d bytes", msgLen)
 		return proxylib.DROP, msgLen
 	}
 	log.Infof("passing %d bytes for sql statement: %s", msgLen, stmt)
