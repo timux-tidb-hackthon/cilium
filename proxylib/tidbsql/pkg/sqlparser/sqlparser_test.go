@@ -18,13 +18,42 @@ func TestGetDatabaseTables(t *testing.T) {
 		wantTable    string
 		wantErr      bool
 	}{
-		// TODO: Add test cases.
 		{
 			name: "select",
 			args: args{
 				sql: "select a, b from d.t",
 			},
 			wantAction:   "select",
+			wantDatabase: "d",
+			wantTable:    "t",
+			wantErr:      false,
+		},
+		{
+			name: "insert",
+			args: args{
+				sql: "insert into d.t values(1)",
+			},
+			wantAction:   "insert",
+			wantDatabase: "d",
+			wantTable:    "t",
+			wantErr:      false,
+		},
+		{
+			name: "update",
+			args: args{
+				sql: "update d.t set t=1 where t=1",
+			},
+			wantAction:   "update",
+			wantDatabase: "d",
+			wantTable:    "t",
+			wantErr:      false,
+		},
+		{
+			name: "delete",
+			args: args{
+				sql: "delete from d.t where t=1",
+			},
+			wantAction:   "delete",
 			wantDatabase: "d",
 			wantTable:    "t",
 			wantErr:      false,
