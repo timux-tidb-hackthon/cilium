@@ -16,7 +16,7 @@ spec:
             - port: "4000"
               protocol: TCP
           rules:
-            l7proto: tidb
+            l7proto: tidbsql
             l7:
               - cmd: "select"
                 database: "test"
