@@ -9,6 +9,7 @@ import (
 	"regexp"
 
 	"github.com/cilium/cilium/proxylib/proxylib"
+	sqlparser "github.com/cilium/cilium/proxylib/proxylib/tidbsql/pkg/sqlparser"
 	cilium "github.com/cilium/proxy/go/cilium/api"
 	log "github.com/sirupsen/logrus"
 )
@@ -25,7 +26,7 @@ type tidbsqlRequestData struct {
 
 func (rule *tidbsqlRule) Matches(data interface{}) bool {
 	// Cast 'data' to the type we give to 'Matches()'
-
+	database, table, _ := sqlparser.GetDatabaseTables(sql)
 	reqData, ok := data.(tidbsqlRequestData)
 	regexStr := ""
 	if rule.tableRegexCompiled != nil {
